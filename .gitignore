@@ -1,0 +1,17 @@
+# Секреты
+.env
+
+# Состояние, логи и индексы — генерируются при запуске
+data/state.db
+data/chroma/
+logs/*
+!logs/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/

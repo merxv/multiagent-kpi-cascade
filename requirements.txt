@@ -1,0 +1,17 @@
+# Схемы сообщений и конфигурация
+pydantic>=2.6
+python-dotenv>=1.0
+# Инструменты
+pypdf>=4.0
+chromadb>=0.5
+sentence-transformers>=2.7
+tenacity>=8.2
+# Генерация PDF-примеров из .md (scripts/make_sample_pdfs.py)
+fpdf2>=2.7
+# Тесты
+pytest>=8.0
+# Провайдеры LLM (нужен только выбранный в .env)
+anthropic>=0.40
+openai>=1.40
+# Веб-интерфейс (этап 2)
+streamlit>=1.35
