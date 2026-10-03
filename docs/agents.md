@@ -7,7 +7,7 @@
 | **Orchestrator** (`core/orchestrator.py`) | Строит план выполнения, вызывает агентов в нужном порядке, следит за лимитами, решает, отправлять ли KPI на доработку. Предметную работу не делает. | `TaskRequest` | `TaskResult` | `state_store` | Reviewer одобрил результат, или исчерпан лимит доработок/шагов/времени, или агент завершился с ошибкой |
 | **MissionAnalyst** (`agents/mission_analyst.py`) | Извлекает из стратегического документа миссию и стратегические цели | путь к документу | `StrategicGoals` | `pdf_reader`, `state_store` | Извлечено ≥3 целей, у каждой есть цитата-основание, найденная в тексте документа |
 | **RankingAnalyst** (`agents/ranking_analyst.py`) | Определяет индикаторы выбранных рейтингов, их веса и влияющую деятельность сотрудников | список рейтингов, `StrategicGoals` | `RankingIndicators` | `vector_search`, `state_store` | Для каждого выбранного рейтинга найдены индикаторы, сумма весов = 100% ± 1.5 |
-| **KPIDesigner** (`agents/kpi_designer.py`) | Формулирует SMART-KPI для всех уровней каскада **одним вызовом LLM** | `StrategicGoals`, `RankingIndicators`, уровни, замечания Reviewer (на доработке) | `KPISet` | `kpi_validator`, `state_store` | На каждом уровне ≥3 KPI, все KPI проходят `kpi_validator` |
+| **KPIDesigner** (`agents/kpi_designer.py`) | Формулирует SMART-KPI для всех уровней каскада **одним вызовом LLM** | `StrategicGoals`, `RankingIndicators`, уровни, замечания Reviewer (на доработке) | `KPISet` | `kpi_validator`, `openalex_stats`, `state_store` | На каждом уровне ≥3 KPI, все KPI проходят `kpi_validator` |
 | **AlignmentMapper** (`agents/alignment_mapper.py`) | Строит матрицу связей «цель — индикатор — KPI» (сила 1–3 с обоснованием) и считает покрытие | `StrategicGoals`, `RankingIndicators`, `KPISet` | `AlignmentMatrix` | `coverage_calculator`, `state_store` | Каждый KPI есть в матрице, ссылки только на существующие цели/индикаторы, покрытие посчитано |
 | **Reviewer** (`agents/reviewer.py`) | Независимо проверяет результат: KPI без целей, цели без KPI, неучтённые индикаторы с большим весом, разрывы каскада, перекосы | `StrategicGoals`, `RankingIndicators`, `KPISet`, `AlignmentMatrix` | `ReviewReport` | `coverage_calculator`, `state_store` | Вынесен вердикт `approved` / `needs_revision` |
 
@@ -37,6 +37,7 @@
 | `state_store` | `tools/state_store.py` | `create_task`, `update_task`, `save_artifact`, `load_artifact` | все агенты |
 | `kpi_validator` | `tools/kpi_validator.py` | `validate(kpi_set, levels)` → отчёт о полноте KPI | KPIDesigner |
 | `coverage_calculator` | `tools/coverage_calculator.py` | `calculate(goals, indicators, kpi_set, links, levels)` → `CoverageReport` | AlignmentMapper, Reviewer |
+| `openalex_stats` | `tools/openalex_stats.py` | `benchmarks(country_code, year)` → публикационные ориентиры OpenAlex или `{"available": false, "error": ...}` | KPIDesigner |
 
 ## Формат сообщений
 

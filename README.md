@@ -42,6 +42,7 @@ cp .env.example .env               # Windows: copy .env.example .env
 | `MAX_STEPS`, `MAX_REVISIONS`, `TASK_TIMEOUT_SEC` | лимиты оркестратора (30 / 2 / 600) |
 | `LLM_TIMEOUT_SEC`, `LLM_MAX_RETRIES` | таймаут и число попыток вызова LLM (60 / 3) |
 | `EMBEDDING_BACKEND` | `auto`, `sentence-transformers` или `hashing` (офлайн) |
+| `OPENALEX_ENABLED`, `OPENALEX_EMAIL` | использовать ли OpenAlex API для реалистичных целевых значений KPI; e-mail для «вежливого» пула (необязательно) |
 
 Ключи API хранятся только в `.env`, который не попадает в git.
 
@@ -60,7 +61,20 @@ python scripts/build_index.py
 При первом запуске скачивается модель `paraphrase-multilingual-MiniLM-L12-v2`; если интернета нет,
 в режиме `auto` используется офлайн-эмбеддер `hashing`.
 
-## Запуск
+## Веб-интерфейс
+
+```bash
+streamlit run app.py
+```
+
+Откроется браузер (http://localhost:8501). В интерфейсе:
+- выбор примера или загрузка своего PDF, выбор рейтингов и уровней каскада, провайдера LLM;
+- прогресс по агентам во время работы;
+- вкладки «Каскад KPI», «Матрица связей», «Цели и индикаторы», «Замечания проверяющего»,
+  «Логи и нагрузка» (таблица и диаграмма нагрузки агентов, журнал событий);
+- скачивание `report.md` и `result.json`.
+
+## Запуск из командной строки
 
 ```bash
 python main.py --input data/samples/univ_a.pdf --rankings QS THE
@@ -105,27 +119,29 @@ python scripts/load_report.py logs/<task_id>.jsonl
 ```
 Агент                LLM  Инстр.  Всего    Доля
 -----------------------------------------------
-Orchestrator           1      10     11   29.7%
-KPIDesigner            2       4      6   16.2%
-AlignmentMapper        2       4      6   16.2%
-Reviewer               2       4      6   16.2%
-RankingAnalyst         1       4      5   13.5%
-MissionAnalyst         1       2      3    8.1%
+Orchestrator           1      10     11   28.2%
+KPIDesigner            2       6      8   20.5%
+AlignmentMapper        2       4      6   15.4%
+Reviewer               2       4      6   15.4%
+RankingAnalyst         1       4      5   12.8%
+MissionAnalyst         1       2      3    7.7%
 -----------------------------------------------
-ИТОГО                  9      28     37
+ИТОГО                  9      30     39
 
 OK: ни один агент не превышает 40% вызовов.
 ```
 
-## Тесты
+## Тесты и сценарии
 
 ```bash
-python -m pytest -q
+python -m pytest -q              # все тесты (51)
+python scripts/run_scenarios.py  # 10 тестовых сценариев с таблицей «пройден / не пройден»
 ```
 
-Тесты работают на провайдере `mock` во временных папках: валидация схем, `kpi_validator`,
-`coverage_calculator`, полный прогон пайплайна на обоих примерах, цикл доработки, лимит доработок,
-лимит шагов, отсутствующий файл.
+Тесты работают на провайдере `mock` во временных папках и без сети: схемы, `kpi_validator`,
+`coverage_calculator`, `openalex_stats`, полный прогон пайплайна, сбои (битый PDF, пустой документ,
+недоступный LLM, невалидный JSON, лимиты доработок, шагов и времени, зацикливание), веб-интерфейс.
+Описание сценариев: [docs/test_scenarios.md](docs/test_scenarios.md).
 
 ## Данные
 
@@ -138,19 +154,20 @@ python -m pytest -q
 
 ```
 main.py                 CLI
+app.py                  веб-интерфейс (Streamlit)
 core/                   схемы, состояние (SQLite), логгер, оркестратор, отчёт, настройки
 agents/                 базовый агент и 5 агентов-исполнителей
-tools/                  pdf_reader, vector_search, state_store, kpi_validator, coverage_calculator
+tools/                  pdf_reader, vector_search, state_store, kpi_validator, coverage_calculator, openalex_stats
 llm/                    клиент LLM с провайдерами и mock-ответы
 prompts/                системные промпты агентов (на русском)
 data/                   методологии рейтингов и примеры стратегий
-scripts/                build_index.py, load_report.py, make_sample_pdfs.py
-tests/                  pytest
-docs/                   архитектура и описание агентов
+scripts/                build_index.py, load_report.py, run_scenarios.py, make_sample_pdfs.py
+tests/                  pytest; tests/scenarios/ — тестовые сценарии и документы для них
+docs/                   архитектура, описание агентов, тестовые сценарии
 ```
 
 ## Этапы
 
 - [x] **Этап 1** — все 6 агентов, CLI, логи, отчёт о нагрузке, тесты на mock.
-- [ ] **Этап 2** — Streamlit-интерфейс, тесты на сбои, `openalex_stats`, тестовые сценарии.
-- [ ] **Этап 3** — ≥10 сценариев, метрики качества, `docs/limitations.md`.
+- [x] **Этап 2** — Streamlit-интерфейс, тесты на сбои, `openalex_stats`, 10 тестовых сценариев.
+- [ ] **Этап 3** — метрики качества, `docs/limitations.md`, финальная чистка.

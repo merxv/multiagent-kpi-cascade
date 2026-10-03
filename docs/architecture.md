@@ -36,13 +36,14 @@ flowchart TD
 
 | Слой | Модули | Назначение |
 |---|---|---|
-| Интерфейс | `main.py` | CLI, печать прогресса, сохранение результатов |
+| Интерфейс | `main.py`, `app.py` | CLI и веб-интерфейс Streamlit: запуск, прогресс, результаты |
 | Оркестрация | `core/orchestrator.py` | план, маршрутизация сообщений, лимиты, решение о доработке |
 | Агенты | `agents/*.py` | предметная работа; общий класс `agents/base.py` |
-| Инструменты | `tools/*.py` | `pdf_reader`, `vector_search`, `state_store`, `kpi_validator`, `coverage_calculator` |
+| Инструменты | `tools/*.py` | `pdf_reader`, `vector_search`, `state_store`, `kpi_validator`, `coverage_calculator`, `openalex_stats` |
 | LLM | `llm/client.py` | провайдеры `anthropic`, `openai`, `ollama`, `mock`; повторы через `tenacity` |
 | Данные | `core/schemas.py`, `core/state.py` | Pydantic-модели; SQLite (`tasks`, `messages`, `artifacts`) |
 | Наблюдаемость | `core/logger.py`, `scripts/load_report.py` | JSONL-логи, отчёт о нагрузке агентов |
+| Проверка | `tests/`, `scripts/run_scenarios.py` | pytest и прогон тестовых сценариев |
 
 ## Внешние инструменты и источники данных
 
@@ -51,6 +52,9 @@ flowchart TD
   `paraphrase-multilingual-MiniLM-L12-v2`. Если модель нельзя скачать (нет интернета), используется
   офлайн-эмбеддер `hashing` (хеширование символьных триграмм) — см. `EMBEDDING_BACKEND` в `.env`.
 - **SQLite** — явное состояние задачи.
+- **OpenAlex API** — реальные публикационные показатели по стране (доля международного соавторства,
+  открытого доступа, типичная публикационная активность университетов) для реалистичных целевых значений KPI.
+  Ответы кэшируются в `data/cache/openalex.json`; при недоступности API KPIDesigner работает без них.
 
 ## Надёжность
 
@@ -62,7 +66,10 @@ flowchart TD
 | Таймаут запроса к LLM | провайдеры | `LLM_TIMEOUT_SEC=60` |
 | Повторы при сбоях LLM (экспоненциальная пауза) | `llm/client.py` | `LLM_MAX_RETRIES=3` |
 | Повторный запрос при невалидном JSON (с текстом ошибки, ≤2 раз) | `agents/base.py` | — |
-| Запрет повторного вызова агента с идентичным входом (SHA-256 входа) | оркестратор | — |
+| Запрет повторного вызова агента с идентичным по существу входом (SHA-256 входа без служебных полей `iteration`, `validation`) | оркестратор | — |
+| Перехват непредвиденных ошибок оркестратора → `TaskResult(status="failed")` | оркестратор | — |
+| Повторы и кэш для OpenAlex; при недоступности — работа без справочных данных | `tools/openalex_stats.py` | `OPENALEX_*` |
+| Базовая пауза между повторами | LLM, OpenAlex | `RETRY_BASE_SEC=1` |
 | Понятное сообщение при сбое: агент, шаг, причина | `TaskResult.message` | — |
 
 При исчерпании лимитов система не падает: возвращается `TaskResult` со статусом `partial`
@@ -75,13 +82,13 @@ flowchart TD
 это событие `message`, оно не является предметным вызовом инструмента и в подсчёт не входит.
 Оркестратор вызывает `state_store` для создания задачи, фиксации текущего шага и финального статуса.
 
-Типовые прогоны на mock-провайдере (`python scripts/load_report.py`):
+Типовые прогоны на mock-провайдере (`python scripts/load_report.py`), с вызовом `openalex_stats`:
 
 | Агент | univ_a (1 доработка) | univ_b (без доработок) |
 |---|---|---|
-| Orchestrator | 11 (29.7%) | 8 (32.0%) |
-| MissionAnalyst | 3 (8.1%) | 3 (12.0%) |
-| RankingAnalyst | 5 (13.5%) | 5 (20.0%) |
-| KPIDesigner | 6 (16.2%) | 3 (12.0%) |
-| AlignmentMapper | 6 (16.2%) | 3 (12.0%) |
-| Reviewer | 6 (16.2%) | 3 (12.0%) |
+| Orchestrator | 11 (28.2%) | 8 (30.8%) |
+| MissionAnalyst | 3 (7.7%) | 3 (11.5%) |
+| RankingAnalyst | 5 (12.8%) | 5 (19.2%) |
+| KPIDesigner | 8 (20.5%) | 4 (15.4%) |
+| AlignmentMapper | 6 (15.4%) | 3 (11.5%) |
+| Reviewer | 6 (15.4%) | 3 (11.5%) |
