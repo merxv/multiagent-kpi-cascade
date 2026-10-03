@@ -1,0 +1,205 @@
+{
+  "_comment": "Связи KPI университета «Вектор»",
+  "match": [
+    "Вектор"
+  ],
+  "response": {
+    "links": [
+      {
+        "kpi_id": "B-U-01",
+        "goal_ids": [
+          "G1",
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-EO",
+          "QS-ER"
+        ],
+        "strength": 3,
+        "rationale": "Трудоустройство по специальности прямо измеряется Employment Outcomes"
+      },
+      {
+        "kpi_id": "B-F-01",
+        "goal_ids": [
+          "G1",
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-ER",
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Участие работодателей в программах повышает репутацию у работодателей"
+      },
+      {
+        "kpi_id": "B-D-01",
+        "goal_ids": [
+          "G1",
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-ER",
+          "QS-EO"
+        ],
+        "strength": 2,
+        "rationale": "Базы практик обеспечивают практическую подготовку и трудоустройство"
+      },
+      {
+        "kpi_id": "B-T-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-ER",
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Практические занятия с участием практиков"
+      },
+      {
+        "kpi_id": "B-U-02",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-IND",
+          "THE-ENV"
+        ],
+        "strength": 3,
+        "rationale": "Доход от НИОКР прямо учитывается в Industry и Research Environment"
+      },
+      {
+        "kpi_id": "B-F-02",
+        "goal_ids": [
+          "G2",
+          "G4"
+        ],
+        "indicator_ids": [
+          "THE-IND",
+          "THE-ENV"
+        ],
+        "strength": 3,
+        "rationale": "НИОКР по заказам предприятий"
+      },
+      {
+        "kpi_id": "B-D-02",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-QUAL",
+          "THE-IND",
+          "QS-AR"
+        ],
+        "strength": 2,
+        "rationale": "Публикации и патенты повышают цитируемость и видимость"
+      },
+      {
+        "kpi_id": "B-T-02",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-QUAL",
+          "THE-ENV"
+        ],
+        "strength": 2,
+        "rationale": "Индивидуальная публикационная активность"
+      },
+      {
+        "kpi_id": "B-U-03",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 1,
+        "rationale": "Цифровое сопровождение косвенно улучшает учебную среду"
+      },
+      {
+        "kpi_id": "B-F-03",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "THE-TEACH",
+          "QS-AR"
+        ],
+        "strength": 1,
+        "rationale": "Открытые онлайн-курсы повышают узнаваемость университета"
+      },
+      {
+        "kpi_id": "B-D-03",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 1,
+        "rationale": "Цифровое сопровождение дисциплин"
+      },
+      {
+        "kpi_id": "B-T-03",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 1,
+        "rationale": "Электронные курсы преподавателя"
+      },
+      {
+        "kpi_id": "B-U-04",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "THE-TEACH",
+          "QS-AR"
+        ],
+        "strength": 2,
+        "rationale": "Доля преподавателей со степенью учитывается в THE Teaching и укрепляет репутацию"
+      },
+      {
+        "kpi_id": "B-F-04",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-FSR",
+          "THE-TEACH"
+        ],
+        "strength": 3,
+        "rationale": "Соотношение студентов и преподавателей прямо входит в QS FSR и THE Teaching"
+      },
+      {
+        "kpi_id": "B-D-04",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-AR",
+          "THE-TEACH"
+        ],
+        "strength": 1,
+        "rationale": "Повышение квалификации и стажировки"
+      },
+      {
+        "kpi_id": "B-T-04",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-AR"
+        ],
+        "strength": 1,
+        "rationale": "Стажировки, в т.ч. зарубежные, расширяют академические связи"
+      }
+    ]
+  }
+}

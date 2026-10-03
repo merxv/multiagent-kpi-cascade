@@ -1,0 +1,249 @@
+{
+  "_comment": "Связи для доработанной версии KPI «Меридиана»",
+  "match": [
+    "Меридиан",
+    "A-T-05"
+  ],
+  "response": {
+    "links": [
+      {
+        "kpi_id": "A-U-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "QS-AR",
+          "THE-QUAL",
+          "THE-ENV"
+        ],
+        "strength": 3,
+        "rationale": "Публикации Q1–Q2 напрямую влияют на цитируемость и академическую репутацию"
+      },
+      {
+        "kpi_id": "A-F-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-ENV"
+        ],
+        "strength": 3,
+        "rationale": "Продуктивность факультета в высокорейтинговых журналах"
+      },
+      {
+        "kpi_id": "A-D-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-QUAL"
+        ],
+        "strength": 2,
+        "rationale": "Вклад кафедры в качество исследований"
+      },
+      {
+        "kpi_id": "A-T-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-QUAL"
+        ],
+        "strength": 2,
+        "rationale": "Индивидуальный вклад в цитируемость"
+      },
+      {
+        "kpi_id": "A-U-02",
+        "goal_ids": [
+          "G3",
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-IRN",
+          "THE-INT",
+          "THE-QUAL"
+        ],
+        "strength": 3,
+        "rationale": "Международное соавторство прямо учитывается в IRN и International Outlook"
+      },
+      {
+        "kpi_id": "A-F-02",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "QS-IRN",
+          "QS-AR"
+        ],
+        "strength": 2,
+        "rationale": "Совместные проекты расширяют международные сети и узнаваемость"
+      },
+      {
+        "kpi_id": "A-D-02",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "QS-IFR",
+          "THE-INT"
+        ],
+        "strength": 2,
+        "rationale": "Приглашённые зарубежные специалисты повышают долю иностранного персонала"
+      },
+      {
+        "kpi_id": "A-T-02",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "QS-IRN",
+          "QS-AR"
+        ],
+        "strength": 2,
+        "rationale": "Совместные публикации и доклады укрепляют международную репутацию"
+      },
+      {
+        "kpi_id": "A-U-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS"
+        ],
+        "strength": 3,
+        "rationale": "Исследования по ЦУР прямо учитываются в индикаторе Sustainability"
+      },
+      {
+        "kpi_id": "A-F-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS"
+        ],
+        "strength": 2,
+        "rationale": "Проекты факультета по ЦУР"
+      },
+      {
+        "kpi_id": "A-D-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS",
+          "THE-ENV"
+        ],
+        "strength": 2,
+        "rationale": "Публикации по ЦУР"
+      },
+      {
+        "kpi_id": "A-T-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS"
+        ],
+        "strength": 1,
+        "rationale": "Участие в проектах по устойчивому развитию"
+      },
+      {
+        "kpi_id": "A-U-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Качество преподавания влияет на репутацию в преподавании"
+      },
+      {
+        "kpi_id": "A-F-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "QS-FSR",
+          "THE-TEACH"
+        ],
+        "strength": 3,
+        "rationale": "Соотношение студентов и преподавателей прямо входит в QS FSR и THE Teaching"
+      },
+      {
+        "kpi_id": "A-D-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Активные методы обучения повышают качество учебной среды"
+      },
+      {
+        "kpi_id": "A-T-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Индивидуальное качество преподавания"
+      },
+      {
+        "kpi_id": "A-U-05",
+        "goal_ids": [
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-EO",
+          "QS-ER"
+        ],
+        "strength": 3,
+        "rationale": "Трудоустройство выпускников прямо измеряется Employment Outcomes и влияет на репутацию у работодателей"
+      },
+      {
+        "kpi_id": "A-F-05",
+        "goal_ids": [
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-EO",
+          "QS-ER"
+        ],
+        "strength": 3,
+        "rationale": "Трудоустройство выпускников факультета"
+      },
+      {
+        "kpi_id": "A-D-05",
+        "goal_ids": [
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-ER",
+          "THE-IND"
+        ],
+        "strength": 2,
+        "rationale": "Договоры с работодателями, включая НИОКР по заказам индустрии"
+      },
+      {
+        "kpi_id": "A-T-05",
+        "goal_ids": [
+          "G4",
+          "G2"
+        ],
+        "indicator_ids": [
+          "QS-ER"
+        ],
+        "strength": 2,
+        "rationale": "Проекты с работодателями и практиками повышают компетентность выпускников"
+      }
+    ]
+  }
+}
