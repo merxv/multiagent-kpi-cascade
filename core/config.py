@@ -20,6 +20,7 @@ class Settings:
     openai_model: str
     ollama_model: str
     ollama_url: str
+    ollama_num_ctx: int
     # Лимиты
     max_steps: int
     max_revisions: int
@@ -64,6 +65,7 @@ def get_settings() -> Settings:
         openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
         ollama_model=os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
         ollama_url=os.getenv("OLLAMA_URL", "http://localhost:11434"),
+        ollama_num_ctx=int(os.getenv("OLLAMA_NUM_CTX", "16384")),
         max_steps=int(os.getenv("MAX_STEPS", "30")),
         max_revisions=int(os.getenv("MAX_REVISIONS", "2")),
         task_timeout_sec=float(os.getenv("TASK_TIMEOUT_SEC", "600")),

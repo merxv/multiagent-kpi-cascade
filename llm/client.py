@@ -8,6 +8,7 @@
 """
 import json
 import os
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -119,25 +120,44 @@ class OpenAIProvider:
 
 
 class OllamaProvider:
-    """Локальная модель через HTTP API Ollama (без дополнительных пакетов)."""
+    """Локальная модель через HTTP API Ollama (без дополнительных пакетов).
+
+    Установка: https://ollama.com, затем `ollama pull <модель>`.
+    """
     name = "ollama"
 
-    def __init__(self, model: str, url: str, timeout: float):
+    def __init__(self, model: str, url: str, timeout: float, num_ctx: int):
         self.model = model
         self.url = url.rstrip("/") + "/api/chat"
         self.timeout = timeout
+        # Размер окна контекста. По умолчанию Ollama берёт ~4 тыс. токенов и молча обрезает
+        # длинный запрос — а у нас в запросе текст стратегии, все KPI и связи
+        self.num_ctx = num_ctx
+        # Ollama работает на этом же компьютере — системный прокси не используем
+        self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def complete(self, system: str, user: str, agent: str, max_tokens: int) -> LLMResponse:
         body = json.dumps({
             "model": self.model,
             "stream": False,
-            "format": "json",
-            "options": {"num_predict": max_tokens},
+            "format": "json",  # Ollama гарантирует синтаксически корректный JSON
+            "options": {"num_predict": max_tokens, "num_ctx": self.num_ctx},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         }).encode("utf-8")
         req = urllib.request.Request(self.url, data=body, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        try:
+            with self._opener.open(req, timeout=self.timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:  # модель не скачана
+                raise LLMConfigError(f"Модель '{self.model}' не найдена в Ollama. "
+                                     f"Скачайте её командой: ollama pull {self.model}") from e
+            raise  # прочие ошибки сервера — временные, LLMClient повторит запрос
+        except urllib.error.URLError as e:
+            if isinstance(e.reason, ConnectionRefusedError):
+                raise LLMConfigError(f"Ollama не запущена (нет ответа по адресу {self.url}). "
+                                     "Откройте приложение Ollama или выполните в терминале: ollama serve") from e
+            raise
         return LLMResponse(text=data["message"]["content"], model=self.model,
                            tokens_in=data.get("prompt_eval_count"), tokens_out=data.get("eval_count"))
 
@@ -151,7 +171,8 @@ def make_provider(settings):
     if p == "openai":
         return OpenAIProvider(settings.openai_model, settings.llm_timeout_sec)
     if p == "ollama":
-        return OllamaProvider(settings.ollama_model, settings.ollama_url, settings.llm_timeout_sec)
+        return OllamaProvider(settings.ollama_model, settings.ollama_url, settings.llm_timeout_sec,
+                              settings.ollama_num_ctx)
     raise LLMConfigError(f"Неизвестный LLM_PROVIDER='{p}'. Допустимо: anthropic, openai, ollama, mock")
 
 
@@ -204,7 +225,11 @@ class LLMClient:
         except LLMConfigError:
             raise
         except Exception as e:
+            hint = ""
+            if isinstance(e, TimeoutError) or "timed out" in str(e):
+                hint = (f" Модель не уложилась в LLM_TIMEOUT_SEC={self.settings.llm_timeout_sec:g} с — "
+                        "для локальной модели увеличьте его в .env.")
             raise LLMError(
                 f"LLM ({provider.name}) не ответил после {self.settings.llm_max_retries} попыток: "
-                f"{type(e).__name__}: {e}"
+                f"{type(e).__name__}: {e}.{hint}"
             ) from e
