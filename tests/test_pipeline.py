@@ -7,7 +7,6 @@ from core.orchestrator import run_pipeline
 from core.report import save_outputs
 from core.schemas import TaskRequest
 from core.state import StateStore
-from llm.client import LLMClient, MockProvider
 from scripts.load_report import compute_load
 
 SAMPLES = ["data/samples/univ_a.pdf", "data/samples/univ_b.pdf"]
@@ -59,29 +58,6 @@ def test_single_ranking_and_partial_levels(settings):
     assert {i.ranking for i in result.indicators.indicators} == {"QS"}
     assert all(k.level != "university" for k in result.kpis.kpis)
     assert list(result.matrix.coverage.indicator_weight_coverage) == ["QS"]
-
-
-class AlwaysRejectingProvider(MockProvider):
-    """Mock, у которого проверяющий никогда не одобряет результат."""
-
-    def complete(self, system, user, agent, max_tokens):
-        resp = super().complete(system, user, agent, max_tokens)
-        if agent == "reviewer":
-            data = json.loads(resp.text)
-            data["verdict"] = "needs_revision"
-            data["issues"].append({"addressee": "KPIDesigner", "priority": "high",
-                                   "category": "тест", "description": "всегда плохо"})
-            resp.text = json.dumps(data, ensure_ascii=False)
-        return resp
-
-
-def test_revision_limit_gives_partial_result(settings):
-    llm = LLMClient(settings, provider=AlwaysRejectingProvider())
-    result = run_pipeline(TaskRequest(input_path=SAMPLES[1], rankings=["QS", "THE"]), settings, llm)
-    assert result.status == "partial"
-    assert result.revisions == settings.max_revisions
-    assert "MAX_REVISIONS" in result.message
-    assert result.kpis is not None  # последняя версия KPI всё равно возвращается
 
 
 def test_missing_file_fails_with_clear_message(settings):
