@@ -7,7 +7,7 @@ from core.schemas import (LEVEL_NAMES_RU, KPISet, RankingIndicators, ReviewRepor
 class KPIDesigner(BaseAgent):
     name = "KPIDesigner"
     slug = "kpi_designer"
-    tool_names = ("kpi_validator", "state_store")
+    tool_names = ("kpi_validator", "openalex_stats", "state_store")
 
     def run(self, payload: dict) -> KPISet:
         goals = StrategicGoals.model_validate(payload["goals"])
@@ -15,13 +15,22 @@ class KPIDesigner(BaseAgent):
         levels: list[str] = payload["levels"]
         iteration: int = payload.get("iteration", 1)
 
+        # Реальные публикационные ориентиры из OpenAlex (ответы кэшируются; при недоступности — без них)
+        stats = self.call_tool("openalex_stats", "benchmarks")
+        if stats.get("available"):
+            stats_text = (f"Справочные публикационные показатели (OpenAlex, {stats['country']}, {stats['year']} г.) — "
+                          f"используй их, чтобы целевые значения были реалистичными:\n{to_json(stats)}\n")
+        else:
+            stats_text = f"Справочные данные OpenAlex недоступны ({stats.get('error')}); опирайся на базовые значения.\n"
+
         levels_text = " → ".join(f"{l} ({LEVEL_NAMES_RU[l]})" for l in levels)
         user = (
             f"Университет: {goals.university}\n"
             f"Миссия: {goals.mission}\n\n"
             f"Уровни каскада (сверху вниз): {levels_text}\n\n"
             f"Стратегические цели:\n{to_json([g.model_dump() for g in goals.goals])}\n\n"
-            f"Индикаторы рейтингов:\n{to_json([i.model_dump() for i in indicators.indicators])}\n"
+            f"Индикаторы рейтингов:\n{to_json([i.model_dump() for i in indicators.indicators])}\n\n"
+            + stats_text
         )
         # На доработке добавляем замечания проверяющего и предыдущую версию KPI
         if payload.get("review"):

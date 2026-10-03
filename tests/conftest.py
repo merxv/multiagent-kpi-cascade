@@ -28,6 +28,10 @@ def settings(tmp_path, chroma_dir, monkeypatch):
         "MAX_STEPS": "30",
         "MAX_REVISIONS": "2",
         "LLM_MAX_RETRIES": "1",
+        "RETRY_BASE_SEC": "0",  # без пауз между повторами — тесты быстрые
+        "OPENALEX_ENABLED": "false",  # сеть в тестах не нужна; OpenAlex тестируется отдельно
+        "OPENALEX_CACHE_PATH": str(tmp_path / "openalex.json"),
+        "UPLOAD_DIR": str(tmp_path / "uploads"),
     }
     for k, v in env.items():
         monkeypatch.setenv(k, v)

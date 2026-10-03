@@ -27,6 +27,7 @@ class Settings:
     llm_timeout_sec: float
     llm_max_retries: int
     llm_max_tokens: int
+    retry_base_sec: float  # базовая пауза между повторами (экспоненциально растёт)
     # Пути
     db_path: Path
     log_dir: Path
@@ -36,6 +37,16 @@ class Settings:
     # Векторный поиск
     embedding_backend: str
     embedding_model: str
+    # OpenAlex
+    openalex_enabled: bool
+    openalex_email: str
+    openalex_api_key: str
+    openalex_country: str
+    openalex_timeout_sec: float
+    openalex_max_retries: int
+    openalex_cache_days: float
+    openalex_cache_path: Path
+    upload_dir: Path
 
 
 def _path(name: str, default: str) -> Path:
@@ -59,6 +70,7 @@ def get_settings() -> Settings:
         llm_timeout_sec=float(os.getenv("LLM_TIMEOUT_SEC", "60")),
         llm_max_retries=int(os.getenv("LLM_MAX_RETRIES", "3")),
         llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "8000")),
+        retry_base_sec=float(os.getenv("RETRY_BASE_SEC", "1")),
         db_path=_path("DB_PATH", "data/state.db"),
         log_dir=_path("LOG_DIR", "logs"),
         output_dir=_path("OUTPUT_DIR", "outputs"),
@@ -66,4 +78,13 @@ def get_settings() -> Settings:
         rankings_dir=_path("RANKINGS_DIR", "data/rankings"),
         embedding_backend=os.getenv("EMBEDDING_BACKEND", "auto").lower(),
         embedding_model=os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"),
+        openalex_enabled=os.getenv("OPENALEX_ENABLED", "true").lower() in ("1", "true", "yes"),
+        openalex_email=os.getenv("OPENALEX_EMAIL", ""),
+        openalex_api_key=os.getenv("OPENALEX_API_KEY", ""),
+        openalex_country=os.getenv("OPENALEX_COUNTRY", "RU"),
+        openalex_timeout_sec=float(os.getenv("OPENALEX_TIMEOUT_SEC", "15")),
+        openalex_max_retries=int(os.getenv("OPENALEX_MAX_RETRIES", "2")),
+        openalex_cache_days=float(os.getenv("OPENALEX_CACHE_DAYS", "30")),
+        openalex_cache_path=_path("OPENALEX_CACHE_PATH", "data/cache/openalex.json"),
+        upload_dir=_path("UPLOAD_DIR", "data/uploads"),
     )

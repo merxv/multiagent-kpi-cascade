@@ -4,6 +4,8 @@
 # Состояние, логи и индексы — генерируются при запуске
 data/state.db
 data/chroma/
+data/cache/
+data/uploads/
 logs/*
 !logs/.gitkeep
 outputs/*

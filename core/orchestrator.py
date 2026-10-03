@@ -25,6 +25,7 @@ from core.state import StateStore
 from llm.client import LLMClient
 from tools.coverage_calculator import CoverageCalculator
 from tools.kpi_validator import KpiValidator
+from tools.openalex_stats import OpenAlexStats
 from tools.pdf_reader import PdfReader
 from tools.state_store import StateStoreTool
 from tools.vector_search import VectorSearch
@@ -57,6 +58,28 @@ CONTEXT_KEY = {
 }
 
 
+# Служебные поля, которые меняются на каждой итерации, но не меняют суть входа агента
+VOLATILE_KEYS = {"iteration", "validation"}
+
+
+def _strip_volatile(obj):
+    if isinstance(obj, dict):
+        return {k: _strip_volatile(v) for k, v in obj.items() if k not in VOLATILE_KEYS}
+    if isinstance(obj, list):
+        return [_strip_volatile(v) for v in obj]
+    return obj
+
+
+def fingerprint(agent: str, payload: dict) -> str:
+    """SHA-256 входа агента без служебных полей (номер итерации и т.п.).
+
+    Если KPIDesigner вернул те же KPI, что и в прошлый раз, AlignmentMapper получил бы
+    тот же по существу вход — повторять такой шаг бессмысленно, это зацикливание.
+    """
+    text = agent + json.dumps(_strip_volatile(payload), sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 class Orchestrator(BaseAgent):
     name = "Orchestrator"
     slug = "orchestrator"
@@ -78,6 +101,7 @@ class Orchestrator(BaseAgent):
             "state_store": StateStoreTool(self.store, request.task_id),
             "kpi_validator": KpiValidator(),
             "coverage_calculator": CoverageCalculator(),
+            "openalex_stats": OpenAlexStats(settings),
         }
         super().__init__(llm, logger, tools, settings)
         self.agents: dict[str, BaseAgent] = {
@@ -153,8 +177,23 @@ class Orchestrator(BaseAgent):
 
     # --- основной цикл --------------------------------------------------------
     def run_task(self) -> TaskResult:
-        req, s = self.request, self.settings
+        """Выполняет задачу. Никогда не бросает исключений: любой сбой превращается в TaskResult."""
         started = time.monotonic()
+        try:
+            return self._run(started)
+        except Exception as e:
+            message = f"Непредвиденная ошибка оркестратора: {type(e).__name__}: {e}"
+            self.logger.log("error", self.name, status="error", message=message)
+            try:
+                self.store.update_task(self.request.task_id, status="failed", message=message)
+            except Exception:
+                pass  # если недоступна сама БД — сообщение всё равно вернётся пользователю
+            return TaskResult(task_id=self.request.task_id, status="failed", message=message,
+                              request=self.request, elapsed_sec=round(time.monotonic() - started, 2),
+                              log_path=str(self.logger.path))
+
+    def _run(self, started: float) -> TaskResult:
+        req, s = self.request, self.settings
         self.logger.log("agent_start", self.name, input=req)
         self.call_tool("state_store", "create_task", params=req.model_dump(mode="json"))
 
@@ -179,9 +218,8 @@ class Orchestrator(BaseAgent):
                 break
 
             payload = self.build_payload(agent, ctx, iteration)
-            # Защита от зацикливания: тот же агент с тем же входом второй раз не вызывается
-            digest = hashlib.sha256((agent + json.dumps(payload, sort_keys=True, ensure_ascii=False))
-                                    .encode("utf-8")).hexdigest()
+            # Защита от зацикливания: тот же агент с тем же по существу входом второй раз не вызывается
+            digest = fingerprint(agent, payload)
             if digest in seen_inputs:
                 status, message = "partial", (f"Обнаружено зацикливание: {agent} получил бы тот же вход, "
                                               f"что и раньше (шаг {steps + 1}). Выполнение остановлено.")

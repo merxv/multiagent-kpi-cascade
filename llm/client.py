@@ -194,7 +194,7 @@ class LLMClient:
 
         retryer = Retrying(
             stop=stop_after_attempt(max(1, self.settings.llm_max_retries)),
-            wait=wait_exponential(multiplier=1, min=1, max=20),
+            wait=wait_exponential(multiplier=self.settings.retry_base_sec, max=20),
             retry=retry_if_not_exception_type(LLMConfigError),
             before_sleep=before_sleep,
             reraise=True,
