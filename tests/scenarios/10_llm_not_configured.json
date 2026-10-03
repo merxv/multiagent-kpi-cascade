@@ -1,0 +1,16 @@
+{
+  "name": "LLM недоступен (не задан ключ API)",
+  "description": "Выбран провайдер anthropic без ключа. Ожидается понятное сообщение о том, что нужно задать ANTHROPIC_API_KEY.",
+  "input": "data/samples/univ_a.pdf",
+  "rankings": [
+    "QS"
+  ],
+  "env": {
+    "LLM_PROVIDER": "anthropic",
+    "ANTHROPIC_API_KEY": ""
+  },
+  "expected": {
+    "status": "failed",
+    "message_contains": "ANTHROPIC_API_KEY"
+  }
+}

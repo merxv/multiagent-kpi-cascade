@@ -1,0 +1,14 @@
+{
+  "name": "Только один рейтинг",
+  "description": "Выбран только рейтинг THE: в результате должны быть только индикаторы THE, покрытие считается только по THE.",
+  "input": "data/samples/univ_b.pdf",
+  "rankings": [
+    "THE"
+  ],
+  "expected": {
+    "status": "completed",
+    "indicator_rankings": [
+      "THE"
+    ]
+  }
+}

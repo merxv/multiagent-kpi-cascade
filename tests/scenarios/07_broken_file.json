@@ -1,0 +1,12 @@
+{
+  "name": "Повреждённый файл",
+  "description": "PDF-файл повреждён (обрезан при загрузке). Ожидается понятное сообщение об ошибке, без падения программы.",
+  "input": "tests/scenarios/docs/broken.pdf",
+  "rankings": [
+    "QS"
+  ],
+  "expected": {
+    "status": "failed",
+    "message_contains": "повреждён"
+  }
+}

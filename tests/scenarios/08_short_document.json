@@ -1,0 +1,12 @@
+{
+  "name": "Очень короткий документ",
+  "description": "Документ из трёх предложений с единственной целью. MissionAnalyst не может выполнить критерий «≥3 целей» и после двух доработок сообщает об этом.",
+  "input": "tests/scenarios/docs/short.md",
+  "rankings": [
+    "QS"
+  ],
+  "expected": {
+    "status": "failed",
+    "message_contains": "нужно не менее 3"
+  }
+}

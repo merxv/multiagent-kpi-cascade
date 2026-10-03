@@ -1,0 +1,21 @@
+{
+  "name": "Неполный каскад (без уровня университета)",
+  "description": "Каскад строится только для уровней факультет → кафедра → преподаватель; верхним уровнем становится факультет.",
+  "input": "data/samples/univ_a.md",
+  "rankings": [
+    "QS"
+  ],
+  "levels": [
+    "faculty",
+    "department",
+    "teacher"
+  ],
+  "expected": {
+    "status": "completed",
+    "kpi_levels": [
+      "faculty",
+      "department",
+      "teacher"
+    ]
+  }
+}

@@ -1,7 +1,12 @@
 """pdf_reader — извлечение текста из PDF (а также .txt/.md для тестов) и разбиение на фрагменты."""
+import logging
 from pathlib import Path
 
 from tools import ToolError
+
+
+# pypdf печатает в консоль предупреждения о битых файлах; мы сообщаем о них сами через ToolError
+logging.getLogger("pypdf").setLevel(logging.ERROR)
 
 
 class PdfReader:

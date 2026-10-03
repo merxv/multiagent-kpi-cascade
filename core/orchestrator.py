@@ -221,8 +221,9 @@ class Orchestrator(BaseAgent):
             # Защита от зацикливания: тот же агент с тем же по существу входом второй раз не вызывается
             digest = fingerprint(agent, payload)
             if digest in seen_inputs:
-                status, message = "partial", (f"Обнаружено зацикливание: {agent} получил бы тот же вход, "
-                                              f"что и раньше (шаг {steps + 1}). Выполнение остановлено.")
+                status, message = "partial", (f"Обнаружено зацикливание: {agent} получил бы тот же по существу "
+                                              f"вход, что и раньше (шаг {steps + 1}), — доработка не изменила "
+                                              "результат. Выполнение остановлено, показана последняя версия.")
                 break
             seen_inputs.add(digest)
 

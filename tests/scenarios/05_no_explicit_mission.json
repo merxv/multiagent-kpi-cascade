@@ -1,0 +1,13 @@
+{
+  "name": "Стратегия без явной миссии",
+  "description": "В документе нет раздела «Миссия». MissionAnalyst восстанавливает миссию по смыслу документа и явно помечает это.",
+  "input": "tests/scenarios/docs/univ_b_no_mission.md",
+  "rankings": [
+    "QS",
+    "THE"
+  ],
+  "expected": {
+    "status": "completed",
+    "mission_startswith": "(не сформулирована явно)"
+  }
+}

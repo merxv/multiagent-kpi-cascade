@@ -1,0 +1,12 @@
+{
+  "name": "Пустой документ",
+  "description": "Файл без текста. Ожидается сообщение «документ пуст».",
+  "input": "tests/scenarios/docs/empty.txt",
+  "rankings": [
+    "QS"
+  ],
+  "expected": {
+    "status": "failed",
+    "message_contains": "пуст"
+  }
+}
