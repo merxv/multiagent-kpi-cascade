@@ -1,7 +1,7 @@
 """AlignmentMapper — строит матрицу связей «цель — индикатор — KPI» и считает покрытие."""
 from agents.base import BaseAgent, to_json
 from core.schemas import (AlignmentDraft, AlignmentMatrix, KPISet, RankingIndicators,
-                          StrategicGoals)
+                          ReviewReport, StrategicGoals)
 
 
 class AlignmentMapper(BaseAgent):
@@ -23,8 +23,17 @@ class AlignmentMapper(BaseAgent):
             "Индикаторы рейтингов:\n"
             + to_json([{"id": i.id, "name": i.name, "weight": i.weight} for i in indicators.indicators])
             + f"\n\nKPI каскада:\n{to_json(kpis_short)}\n\n"
-            "Для каждого KPI укажи связанные цели и индикаторы. Верни JSON по формату из инструкции."
         )
+        # На доработке — замечания проверяющего к связям (например, KPI-сироты)
+        if payload.get("review"):
+            review = ReviewReport.model_validate(payload["review"])
+            issues = [i for i in review.issues if i.addressee == "AlignmentMapper"]
+            if issues:
+                user += ("## Замечания проверяющего к связям\n"
+                         + "\n".join(f"- {i.description}" for i in issues)
+                         + "\nПроверь эти KPI особенно внимательно: у каждого KPI, который работает на цель, "
+                           "должна быть указана хотя бы одна цель.\n\n")
+        user += "Для каждого KPI укажи связанные цели и индикаторы. Верни JSON по формату из инструкции."
 
         goal_ids = {g.id for g in goals.goals}
         indicator_ids = {i.id for i in indicators.indicators}

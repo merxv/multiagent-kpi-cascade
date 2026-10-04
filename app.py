@@ -207,13 +207,28 @@ def tab_review(r: TaskResult) -> None:
         return
     verdict = "одобрено" if r.review.verdict == "approved" else "требуется доработка"
     st.markdown(f"**Вердикт (итерация {r.review.iteration}):** {verdict}\n\n{r.review.summary}")
-    if r.review.issues:
-        order = {"high": 0, "medium": 1, "low": 2}
-        issues = sorted(r.review.issues, key=lambda i: order[i.priority])
+    st.caption("Вердикт определяют блокирующие замечания — результаты объективных проверок (покрытие целей "
+               "и индикаторов, связи KPI, целостность каскада). Замечания LLM — экспертные рекомендации.")
+    order = {"high": 0, "medium": 1, "low": 2}
+    blocking = [i for i in r.review.issues if i.blocking]
+    advice = sorted((i for i in r.review.issues if not i.blocking), key=lambda i: order[i.priority])
+
+    def show(issues):
         # Списком, а не таблицей: замечания длинные и в ячейках обрезались бы
         for i in issues:
             ids = f" · связано: {', '.join(i.related_ids)}" if i.related_ids else ""
             st.markdown(f"- **[{PRIORITY_RU[i.priority]}] {i.category}** → {i.addressee}: {i.description}{ids}")
+
+    st.subheader(f"Блокирующие замечания ({len(blocking)})")
+    if blocking:
+        show(blocking)
+    else:
+        st.success("Объективные проверки пройдены.")
+    st.subheader(f"Рекомендации ({len(advice)})")
+    if advice:
+        show(advice)
+    else:
+        st.write("Нет.")
 
 
 def load_chart(load: pd.DataFrame) -> alt.Chart:

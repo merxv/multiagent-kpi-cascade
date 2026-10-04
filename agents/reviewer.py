@@ -1,4 +1,12 @@
-"""Reviewer — независимо проверяет каскад KPI и матрицу связей и выносит вердикт."""
+"""Reviewer — независимо проверяет каскад KPI и матрицу связей и выносит вердикт.
+
+Разделение полномочий:
+  * одобрение блокируют только ПРОВЕРЯЕМЫЕ замечания — их считает coverage_calculator без LLM:
+    цели без KPI, KPI без связи с целями, непокрытые индикаторы с большим весом, разрывы каскада;
+  * замечания LLM (перекосы, нереалистичные цели, размытые формулировки) — экспертные рекомендации:
+    они попадают в отчёт и передаются на доработку, но сами по себе одобрение не блокируют.
+Так итог не зависит от ошибок рассуждения LLM (особенно небольших локальных моделей).
+"""
 from agents.base import BaseAgent, to_json
 from core.schemas import (AlignmentMatrix, CoverageReport, KPISet, RankingIndicators,
                           ReviewIssue, ReviewReport, StrategicGoals)
@@ -7,27 +15,28 @@ BIG_WEIGHT = 10.0  # индикатор с весом ≥10% обязатель�
 
 
 def coverage_issues(cov: CoverageReport, indicators: RankingIndicators) -> list[ReviewIssue]:
-    """Замечания, которые следуют из детерминированного расчёта покрытия (без LLM)."""
+    """Блокирующие замечания, которые следуют из детерминированного расчёта покрытия."""
     issues = []
     if cov.uncovered_goals:
         issues.append(ReviewIssue(addressee="KPIDesigner", priority="high", category="цели без KPI",
                                   description="Нет KPI для стратегических целей: " + ", ".join(cov.uncovered_goals),
-                                  related_ids=cov.uncovered_goals))
-    if cov.orphan_kpis or cov.unlinked_kpis:
-        ids = cov.orphan_kpis + cov.unlinked_kpis
-        issues.append(ReviewIssue(addressee="KPIDesigner", priority="high", category="KPI-сироты",
-                                  description="KPI не связаны ни с одной стратегической целью: " + ", ".join(ids),
-                                  related_ids=ids))
+                                  related_ids=cov.uncovered_goals, blocking=True))
     big = [i for i in indicators.indicators if i.id in cov.uncovered_indicators and i.weight >= BIG_WEIGHT]
     if big:
-        issues.append(ReviewIssue(addressee="KPIDesigner", priority="high",
-                                  category="неучтённые индикаторы",
+        issues.append(ReviewIssue(addressee="KPIDesigner", priority="high", category="неучтённые индикаторы",
                                   description="Не покрыты индикаторы с большим весом: "
                                               + ", ".join(f"{i.id} ({i.weight:g}%)" for i in big),
-                                  related_ids=[i.id for i in big]))
+                                  related_ids=[i.id for i in big], blocking=True))
     if cov.cascade_gaps:
+        ids = [gap.split(":")[0] for gap in cov.cascade_gaps]
         issues.append(ReviewIssue(addressee="KPIDesigner", priority="high", category="разрывы каскада",
-                                  description="; ".join(cov.cascade_gaps), related_ids=[]))
+                                  description="; ".join(cov.cascade_gaps), related_ids=ids, blocking=True))
+    if cov.orphan_kpis or cov.unlinked_kpis:
+        # KPI есть, но в матрице он не связан с целями — это прежде всего работа AlignmentMapper
+        ids = cov.orphan_kpis + cov.unlinked_kpis
+        issues.append(ReviewIssue(addressee="AlignmentMapper", priority="high", category="KPI-сироты",
+                                  description="KPI не связаны ни с одной стратегической целью: " + ", ".join(ids),
+                                  related_ids=ids, blocking=True))
     return issues
 
 
@@ -54,20 +63,21 @@ class Reviewer(BaseAgent):
             f"Стратегические цели:\n{to_json([g.model_dump() for g in goals.goals])}\n\n"
             "Индикаторы рейтингов:\n"
             + to_json([{"id": i.id, "name": i.name, "weight": i.weight} for i in indicators.indicators])
-            + f"\n\nKPI каскада:\n{to_json([k.model_dump() for k in kpi_set.kpis])}\n\n"
-            f"Матрица связей:\n{to_json([l.model_dump() for l in matrix.links])}\n\n"
+            + f"\n\nKPI каскада:\n{to_json([k.model_dump(exclude={'rationale'}) for k in kpi_set.kpis])}\n\n"
+            f"Матрица связей:\n{to_json([l.model_dump(exclude={'rationale'}) for l in matrix.links])}\n\n"
             f"Расчёт покрытия (coverage_calculator):\n{to_json(cov)}\n\n"
             "Проверь результат и вынеси вердикт. Верни JSON по формату из инструкции."
         )
         report = self.ask_llm(user, ReviewReport)
         report.iteration = iteration
+        report.llm_verdict = report.verdict
+        for issue in report.issues:
+            issue.blocking = False  # замечания LLM — только рекомендации
 
-        # Детерминированные замечания добавляем всегда; при серьёзных проблемах
-        # одобрение невозможно, даже если LLM их пропустил
+        # Итоговый вердикт определяют только проверяемые (блокирующие) замечания
         auto = coverage_issues(cov, indicators)
         report.issues = auto + report.issues
-        if any(i.priority == "high" for i in report.issues):
-            report.verdict = "needs_revision"
+        report.verdict = "needs_revision" if auto else "approved"
 
         self.save("review_report", report)
         return report

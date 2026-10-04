@@ -74,10 +74,14 @@ def render_report(r: TaskResult) -> str:
     if r.review:
         verdict = "одобрено" if r.review.verdict == "approved" else "требуется доработка"
         lines += ["## 5. Заключение проверяющего", "",
-                  f"**Вердикт (итерация {r.review.iteration}):** {verdict}", "", r.review.summary, ""]
+                  f"**Вердикт (итерация {r.review.iteration}):** {verdict}", "",
+                  "Вердикт определяется блокирующими замечаниями — результатами объективных проверок "
+                  "(покрытие целей и индикаторов, связи KPI, целостность каскада). "
+                  "Замечания LLM — экспертные рекомендации.", "", r.review.summary, ""]
         if r.review.issues:
-            lines += ["| Приоритет | Адресат | Категория | Замечание |", "|---|---|---|---|"]
-            lines += [f"| {PRIORITY_RU[i.priority]} | {i.addressee} | {_cell(i.category)} | {_cell(i.description)} |"
+            lines += ["| Тип | Приоритет | Адресат | Категория | Замечание |", "|---|---|---|---|---|"]
+            lines += [f"| {'блокирующее' if i.blocking else 'рекомендация'} | {PRIORITY_RU[i.priority]} | "
+                      f"{i.addressee} | {_cell(i.category)} | {_cell(i.description)} |"
                       for i in r.review.issues]
             lines.append("")
     return "\n".join(lines)

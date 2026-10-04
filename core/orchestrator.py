@@ -47,7 +47,15 @@ ROLES = {
     "AlignmentMapper": "строит матрицу связей цель — индикатор — KPI и считает покрытие",
     "Reviewer": "проверяет результат и выносит вердикт",
 }
-REVISION_STEPS = ["KPIDesigner", "AlignmentMapper", "Reviewer"]  # цикл доработки
+# Цикл доработки зависит от того, кому адресованы блокирующие замечания проверяющего
+REVISION_STEPS = ["KPIDesigner", "AlignmentMapper", "Reviewer"]  # нужно менять сами KPI
+RELINK_STEPS = ["AlignmentMapper", "Reviewer"]  # KPI в порядке, нужно поправить только связи
+
+
+def revision_steps(review: dict) -> list[str]:
+    """Выбирает цикл доработки по адресатам блокирующих замечаний (маршрутизация, не предметная работа)."""
+    addressees = {i["addressee"] for i in review["issues"] if i.get("blocking")}
+    return REVISION_STEPS if "KPIDesigner" in addressees or not addressees else RELINK_STEPS
 # Под каким ключом результат агента хранится в контексте задачи
 CONTEXT_KEY = {
     "MissionAnalyst": "goals",
@@ -153,8 +161,11 @@ class Orchestrator(BaseAgent):
                 payload.update(review=ctx["review"], previous_kpis=ctx["kpis"])
             return payload
         if agent == "AlignmentMapper":
-            return {"goals": ctx["goals"], "indicators": ctx["indicators"], "kpis": ctx["kpis"],
-                    "levels": req.levels}
+            payload = {"goals": ctx["goals"], "indicators": ctx["indicators"], "kpis": ctx["kpis"],
+                       "levels": req.levels}
+            if "review" in ctx:  # доработка: передаём замечания проверяющего к связям
+                payload["review"] = ctx["review"]
+            return payload
         if agent == "Reviewer":
             return {"goals": ctx["goals"], "indicators": ctx["indicators"], "kpis": ctx["kpis"],
                     "matrix": ctx["matrix"], "levels": req.levels, "iteration": iteration}
@@ -246,8 +257,10 @@ class Orchestrator(BaseAgent):
                 if revisions < s.max_revisions:
                     revisions += 1
                     iteration += 1
-                    self.on_progress(f"Reviewer вернул KPI на доработку ({revisions}/{s.max_revisions})")
-                    queue.extend(REVISION_STEPS)
+                    steps_next = revision_steps(reply.payload)
+                    self.on_progress(f"Reviewer вернул на доработку ({revisions}/{s.max_revisions}): "
+                                     f"{' → '.join(steps_next)}")
+                    queue.extend(steps_next)
                 else:
                     status, message = "partial", (f"Лимит доработок MAX_REVISIONS={s.max_revisions} исчерпан, "
                                                   "проверяющий не одобрил результат. Показана последняя версия.")

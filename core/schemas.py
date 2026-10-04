@@ -160,6 +160,17 @@ class KPITree(BaseModel):
     kpis: list[KPINode]
 
 
+class BranchCompletion(BaseModel):
+    """Недостающие дочерние KPI для одного KPI с оборванной веткой."""
+    parent_id: str
+    children: list[KPINode]
+
+
+class KPICompletion(BaseModel):
+    """Ответ LLM у KPIDesigner при дописывании оборванных веток."""
+    completions: list[BranchCompletion]
+
+
 # ---------------------------------------------------------------------------
 # AlignmentMapper
 # ---------------------------------------------------------------------------
@@ -209,17 +220,22 @@ class ReviewIssue(BaseModel):
     category: str
     description: str
     related_ids: list[str] = Field(default_factory=list)
+    # True — замечание из детерминированной проверки (расчёт покрытия); только такие
+    # замечания блокируют одобрение. Замечания LLM — рекомендации (blocking=False).
+    blocking: bool = False
 
 
 class ReviewReport(BaseModel):
-    verdict: Literal["approved", "needs_revision"]
+    verdict: Literal["approved", "needs_revision"]  # итоговый вердикт (по блокирующим замечаниям)
     summary: str
     issues: list[ReviewIssue] = Field(default_factory=list)
     iteration: int = 1
+    llm_verdict: str | None = None  # мнение LLM — для прозрачности, на итог не влияет
 
     def summary_text(self) -> str:
-        high = sum(1 for i in self.issues if i.priority == "high")
-        return f"вердикт: {self.verdict}, замечаний {len(self.issues)} (высокий приоритет: {high})"
+        blocking = sum(1 for i in self.issues if i.blocking)
+        return (f"вердикт: {self.verdict}, блокирующих замечаний {blocking}, "
+                f"рекомендаций {len(self.issues) - blocking}")
 
 
 # ---------------------------------------------------------------------------
