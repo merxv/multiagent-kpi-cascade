@@ -27,10 +27,16 @@ flowchart TD
    `AgentMessage(type="result" | "review" | "error")`. Все сообщения сохраняются в таблицу `messages`.
 4. MissionAnalyst выполняется раньше RankingAnalyst, т.к. RankingAnalyst ищет в методологиях
    фрагменты, близкие к стратегическим целям университета.
-5. Если Reviewer вернул `needs_revision`, оркестратор ставит в очередь цикл
-   KPIDesigner → AlignmentMapper → Reviewer (не более `MAX_REVISIONS` раз), передавая KPIDesigner
-   замечания и предыдущую версию KPI.
-6. Результат (`TaskResult`) сохраняется в `outputs/<task_id>/result.json` и `report.md`.
+5. Reviewer выносит вердикт. Одобрение блокируют только **проверяемые** замечания — результаты
+   детерминированного расчёта покрытия (цели без KPI, KPI-сироты, непокрытые индикаторы с весом ≥10%,
+   разрывы каскада). Замечания LLM — экспертные рекомендации: попадают в отчёт и на доработку,
+   но одобрение не блокируют.
+6. Если вердикт `needs_revision`, оркестратор выбирает цикл доработки по адресатам блокирующих замечаний
+   (не более `MAX_REVISIONS` раз):
+   - есть замечания к KPI → KPIDesigner → AlignmentMapper → Reviewer;
+   - замечания только к связям (KPI-сироты) → AlignmentMapper → Reviewer, KPI не переписываются.
+   KPIDesigner на доработке сохраняет ветки без замечаний и переписывает только проблемные.
+7. Результат (`TaskResult`) сохраняется в `outputs/<task_id>/result.json` и `report.md`.
 
 ## Компоненты
 
@@ -86,9 +92,12 @@ flowchart TD
 
 | Агент | univ_a (1 доработка) | univ_b (без доработок) |
 |---|---|---|
-| Orchestrator | 11 (28.2%) | 8 (30.8%) |
-| MissionAnalyst | 3 (7.7%) | 3 (11.5%) |
-| RankingAnalyst | 5 (12.8%) | 5 (19.2%) |
-| KPIDesigner | 8 (20.5%) | 4 (15.4%) |
-| AlignmentMapper | 6 (15.4%) | 3 (11.5%) |
-| Reviewer | 6 (15.4%) | 3 (11.5%) |
+| Orchestrator | 11 (26.8%) | 8 (29.6%) |
+| MissionAnalyst | 3 (7.3%) | 3 (11.1%) |
+| RankingAnalyst | 5 (12.2%) | 5 (18.5%) |
+| KPIDesigner | 10 (24.4%) | 5 (18.5%) |
+| AlignmentMapper | 6 (14.6%) | 3 (11.1%) |
+| Reviewer | 6 (14.6%) | 3 (11.1%) |
+
+С настоящей моделью у KPIDesigner может добавиться вызов LLM на дописывание оборванных веток,
+а у всех агентов — повторные запросы при ошибках; итоговую долю показывает `load_report.py` по логу прогона.

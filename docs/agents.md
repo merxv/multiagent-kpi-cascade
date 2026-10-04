@@ -7,9 +7,9 @@
 | **Orchestrator** (`core/orchestrator.py`) | Строит план выполнения, вызывает агентов в нужном порядке, следит за лимитами, решает, отправлять ли KPI на доработку. Предметную работу не делает. | `TaskRequest` | `TaskResult` | `state_store` | Reviewer одобрил результат, или исчерпан лимит доработок/шагов/времени, или агент завершился с ошибкой |
 | **MissionAnalyst** (`agents/mission_analyst.py`) | Извлекает из стратегического документа миссию и стратегические цели | путь к документу | `StrategicGoals` | `pdf_reader`, `state_store` | Извлечено ≥3 целей, у каждой есть цитата-основание, найденная в тексте документа |
 | **RankingAnalyst** (`agents/ranking_analyst.py`) | Определяет индикаторы выбранных рейтингов, их веса и влияющую деятельность сотрудников | список рейтингов, `StrategicGoals` | `RankingIndicators` | `vector_search`, `state_store` | Для каждого выбранного рейтинга найдены индикаторы, сумма весов = 100% ± 1.5 |
-| **KPIDesigner** (`agents/kpi_designer.py`) | Формулирует SMART-KPI для всех уровней каскада **одним вызовом LLM** | `StrategicGoals`, `RankingIndicators`, уровни, замечания Reviewer (на доработке) | `KPISet` | `kpi_validator`, `openalex_stats`, `state_store` | На каждом уровне ≥3 KPI, все KPI проходят `kpi_validator` |
+| **KPIDesigner** (`agents/kpi_designer.py`) | Формулирует SMART-KPI для всех уровней каскада **одним вызовом LLM** | `StrategicGoals`, `RankingIndicators`, уровни, замечания Reviewer (на доработке) | `KPISet` | `kpi_validator`, `openalex_stats`, `state_store` | На каждом уровне ≥3 KPI, все KPI проходят `kpi_validator`, оборванные ветки дописаны |
 | **AlignmentMapper** (`agents/alignment_mapper.py`) | Строит матрицу связей «цель — индикатор — KPI» (сила 1–3 с обоснованием) и считает покрытие | `StrategicGoals`, `RankingIndicators`, `KPISet` | `AlignmentMatrix` | `coverage_calculator`, `state_store` | Каждый KPI есть в матрице, ссылки только на существующие цели/индикаторы, покрытие посчитано |
-| **Reviewer** (`agents/reviewer.py`) | Независимо проверяет результат: KPI без целей, цели без KPI, неучтённые индикаторы с большим весом, разрывы каскада, перекосы | `StrategicGoals`, `RankingIndicators`, `KPISet`, `AlignmentMatrix` | `ReviewReport` | `coverage_calculator`, `state_store` | Вынесен вердикт `approved` / `needs_revision` |
+| **Reviewer** (`agents/reviewer.py`) | Независимо проверяет результат: KPI без целей, цели без KPI, неучтённые индикаторы с большим весом, разрывы каскада, перекосы | `StrategicGoals`, `RankingIndicators`, `KPISet`, `AlignmentMatrix` | `ReviewReport` | `coverage_calculator`, `state_store` | Вынесен вердикт: `needs_revision`, если есть блокирующие (проверяемые) замечания, иначе `approved` |
 
 Ни у одного агента нет более 5 инструментов (проверяется `assert` в `BaseAgent.__init__`);
 агенту передаются только его инструменты, вызвать чужой нельзя.
@@ -50,9 +50,21 @@ LLM получает этот справочник и описывает инд�
 Каждое исправление пишется в лог (событие `info`, имя `reconcile`). Так небольшие локальные модели,
 которые путают подындикаторы THE с индикаторами, не ломают пайплайн.
 
-Детерминированные инструменты (`kpi_validator`, `coverage_calculator`) не используют LLM, поэтому
-их результатам можно доверять как фактам. Reviewer добавляет «автоматические» замечания по расчёту
-покрытия и не может одобрить результат, если среди замечаний есть замечание высокого приоритета.
+**KPIDesigner: дописывание оборванных веток.** Если у KPI (кроме нижнего уровня) нет дочерних KPI,
+код находит такие ветки сам и отдельным запросом просит LLM дописать только недостающие звенья
+(`KPICompletion`: `parent_id` + вложенные дочерние KPI), не переделывая весь набор.
+
+**KPIDesigner: адресная доработка.** На доработке ветки без блокирующих замечаний сохраняются как есть;
+LLM возвращает только исправленные ветки и новые ветки для непокрытых целей и индикаторов.
+Какие ветки сохранены, а какие переписаны, пишется в лог (событие `info`, имя `revision_plan`).
+
+**Reviewer: проверяемые замечания и рекомендации.** Детерминированные инструменты (`kpi_validator`,
+`coverage_calculator`) не используют LLM, поэтому их результатам можно доверять как фактам.
+Замечания из расчёта покрытия помечаются `blocking: true` и только они определяют вердикт.
+Замечания LLM — рекомендации (`blocking: false`): они видны в отчёте и передаются на доработку,
+но одобрение не блокируют; мнение LLM о вердикте сохраняется в поле `llm_verdict`.
+Адресат блокирующего замечания определяет цикл доработки: KPI-сироты — AlignmentMapper
+(переписываются только связи), остальное — KPIDesigner.
 
 ## Инструменты
 
@@ -170,11 +182,12 @@ LLM получает этот справочник и описывает инд�
   "iteration": 1,
   "issues": [
     {"addressee": "KPIDesigner", "priority": "high", "category": "цели без KPI",
-     "description": "Нет KPI для стратегических целей: G2, G4", "related_ids": ["G2", "G4"]},
+     "description": "Нет KPI для стратегических целей: G2, G4", "related_ids": ["G2", "G4"], "blocking": true},
     {"addressee": "KPIDesigner", "priority": "high", "category": "перекос",
      "description": "KPI преподавателя (T-01…T-03) стимулируют только исследования...",
-     "related_ids": ["T-01", "T-02", "T-03"]}
-  ]
+     "related_ids": ["T-01", "T-02", "T-03"], "blocking": false}
+  ],
+  "llm_verdict": "needs_revision"
 }
 ```
 

@@ -1,12 +1,13 @@
 """Тесты на сбои и лимиты (раздел 8 ТЗ): ни один сбой не должен ронять систему."""
 import json
+import re
 
 import pytest
 
 from core.config import get_settings
 from core.orchestrator import Orchestrator, fingerprint, run_pipeline
 from core.schemas import TaskRequest
-from llm.client import LLMClient, MockProvider
+from llm.client import LLMClient, LLMResponse, MockProvider
 
 UNIV_A, UNIV_B = "data/samples/univ_a.pdf", "data/samples/univ_b.pdf"
 
@@ -128,15 +129,14 @@ def test_invalid_plan_falls_back_to_default(settings):
 
 # --- лимиты и зацикливание ----------------------------------------------------
 class AlwaysRejectingProvider(MockProvider):
-    """Mock, у которого проверяющий никогда не одобряет результат."""
+    """AlignmentMapper всегда «теряет» связь первого KPI с целями — KPI-сирота.
+    Это блокирующее замечание, поэтому проверяющий никогда не одобряет результат."""
 
     def complete(self, system, user, agent, max_tokens):
         resp = super().complete(system, user, agent, max_tokens)
-        if agent == "reviewer":
+        if agent == "alignment_mapper":
             data = json.loads(resp.text)
-            data["verdict"] = "needs_revision"
-            data["issues"].append({"addressee": "KPIDesigner", "priority": "high",
-                                   "category": "тест", "description": "всегда плохо"})
+            data["links"][0]["goal_ids"] = []
             resp.text = json.dumps(data, ensure_ascii=False)
         return resp
 
@@ -150,12 +150,15 @@ def test_revision_limit(settings, monkeypatch):
 
 
 def test_loop_detection(settings):
-    # Для «Вектора» KPIDesigner на доработке возвращает те же KPI, поэтому AlignmentMapper
-    # получил бы тот же по существу вход — оркестратор останавливается
+    # Замечание адресовано AlignmentMapper (KPI-сирота), поэтому доработка идёт без KPIDesigner.
+    # AlignmentMapper вернул ту же матрицу, значит Reviewer получил бы тот же по существу вход —
+    # оркестратор останавливается, не тратя шаги на повторную проверку того же самого
     result = run(settings, UNIV_B, AlwaysRejectingProvider())
     assert result.status == "partial"
-    assert "зацикливание" in result.message and "AlignmentMapper" in result.message
-    assert result.steps_used == 6
+    assert "зацикливание" in result.message and "Reviewer" in result.message
+    assert result.steps_used == 6  # MA, RA, KD, AM, RV, AM
+    kd_calls = [e for e in log_events(result) if e["event"] == "llm_call" and e["agent"] == "KPIDesigner"]
+    assert len(kd_calls) == 1  # KPI не переписывались — правились только связи
 
 
 def test_fingerprint_ignores_iteration():
@@ -225,36 +228,65 @@ def test_ranking_analyst_reconciles_with_knowledge_base(settings):
     assert "вес QS-AR: 25% → 30%" in fixes[0] and "дополнен из базы знаний THE-QUAL" in fixes[0]
 
 
-class ShallowTreeProvider(MockProvider):
-    """Первый ответ KPIDesigner: дерево без уровня «Преподаватель» и без единиц измерения;
-    дальше — нормальный ответ. Проверяем, что ошибки названы понятно и модель переспрашивают."""
+class MissingUnitsProvider(MockProvider):
+    """Первый ответ KPIDesigner — KPI верхнего уровня без единиц измерения; дальше — нормальный ответ."""
 
     def __init__(self):
         super().__init__()
-        self.kd_calls = 0
-        self.retry_prompt = ""
+        self.kd_prompts = []
 
     def complete(self, system, user, agent, max_tokens):
         resp = super().complete(system, user, agent, max_tokens)
         if agent == "kpi_designer":
-            self.kd_calls += 1
-            if self.kd_calls == 1:
+            self.kd_prompts.append(user)
+            if len(self.kd_prompts) == 1:
                 data = json.loads(resp.text)
                 for u in data["kpis"]:
                     u["unit"] = ""
-                    for f in u["children"]:
-                        for d in f["children"]:
-                            d["children"] = []
                 resp.text = json.dumps(data, ensure_ascii=False)
-            else:
-                self.retry_prompt = user
         return resp
 
 
-def test_kpi_tree_errors_are_explained_and_retried(settings):
-    provider = ShallowTreeProvider()
+def test_kpi_errors_are_explained_and_retried(settings):
+    provider = MissingUnitsProvider()
     result = run(settings, UNIV_B, provider)
     assert result.status == "completed", result.message
-    assert provider.kd_calls == 2
-    assert "на уровне «Преподаватель» 0 KPI" in provider.retry_prompt
-    assert "нет единицы измерения" in provider.retry_prompt and "KPI «Доля" in provider.retry_prompt
+    assert len(provider.kd_prompts) == 2
+    assert "нет единицы измерения" in provider.kd_prompts[1] and "KPI «Доля" in provider.kd_prompts[1]
+
+
+class BrokenBranchesProvider(MockProvider):
+    """KPIDesigner обрывает ветки на уровне «Кафедра»; при запросе на дописывание
+    возвращает по одному KPI преподавателя для каждой оборванной ветки."""
+
+    def __init__(self):
+        super().__init__()
+        self.completion_prompt = ""
+
+    def complete(self, system, user, agent, max_tokens):
+        if agent == "kpi_designer" and "Допиши недостающие звенья" in user:
+            self.completion_prompt = user
+            gap_ids = re.findall(r"^- (D-\d\d) «", user, flags=re.M)
+            completions = [{"parent_id": gid, "children": [
+                {"name": f"Вклад преподавателя в {gid}", "method": "количество", "unit": "единиц",
+                 "target": 1, "period": "год", "children": []}]} for gid in gap_ids]
+            return LLMResponse(text=json.dumps({"completions": completions}, ensure_ascii=False), model="mock")
+        resp = super().complete(system, user, agent, max_tokens)
+        if agent == "kpi_designer":
+            data = json.loads(resp.text)
+            for u in data["kpis"]:
+                for f in u["children"]:
+                    for d in f["children"]:
+                        d["children"] = []
+            resp.text = json.dumps(data, ensure_ascii=False)
+        return resp
+
+
+def test_broken_branches_are_completed(settings):
+    provider = BrokenBranchesProvider()
+    result = run(settings, UNIV_B, provider, rankings=["QS"])
+    assert "D-01" in provider.completion_prompt and "нужна цепочка Преподаватель" in provider.completion_prompt
+    teachers = result.kpis.by_level("teacher")
+    assert len(teachers) == 4 and all(t.name.startswith("Вклад преподавателя") for t in teachers)
+    assert {t.parent_id for t in teachers} == {"D-01", "D-02", "D-03", "D-04"}
+    assert result.kpis.validation["set_problems"] == []

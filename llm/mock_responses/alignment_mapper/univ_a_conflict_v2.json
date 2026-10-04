@@ -1,0 +1,286 @@
+{
+  "_comment": "Сценарий 06: связи для доработанной версии с веткой по цели G6",
+  "match": [
+    "Меридиан",
+    "T-05",
+    "U-06"
+  ],
+  "response": {
+    "links": [
+      {
+        "kpi_id": "U-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "QS-AR",
+          "THE-QUAL",
+          "THE-ENV"
+        ],
+        "strength": 3,
+        "rationale": "Публикации Q1–Q2 напрямую влияют на цитируемость и академическую репутацию"
+      },
+      {
+        "kpi_id": "F-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-ENV"
+        ],
+        "strength": 3,
+        "rationale": "Продуктивность факультета в высокорейтинговых журналах"
+      },
+      {
+        "kpi_id": "D-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-QUAL"
+        ],
+        "strength": 2,
+        "rationale": "Вклад кафедры в качество исследований"
+      },
+      {
+        "kpi_id": "T-01",
+        "goal_ids": [
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-CPF",
+          "THE-QUAL"
+        ],
+        "strength": 2,
+        "rationale": "Индивидуальный вклад в цитируемость"
+      },
+      {
+        "kpi_id": "U-02",
+        "goal_ids": [
+          "G3",
+          "G1"
+        ],
+        "indicator_ids": [
+          "QS-IRN",
+          "THE-INT",
+          "THE-QUAL"
+        ],
+        "strength": 3,
+        "rationale": "Международное соавторство прямо учитывается в IRN и International Outlook"
+      },
+      {
+        "kpi_id": "F-02",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "QS-IRN",
+          "QS-AR"
+        ],
+        "strength": 2,
+        "rationale": "Совместные проекты расширяют международные сети и узнаваемость"
+      },
+      {
+        "kpi_id": "D-02",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "QS-IFR",
+          "THE-INT"
+        ],
+        "strength": 2,
+        "rationale": "Приглашённые зарубежные специалисты повышают долю иностранного персонала"
+      },
+      {
+        "kpi_id": "T-02",
+        "goal_ids": [
+          "G3"
+        ],
+        "indicator_ids": [
+          "QS-IRN",
+          "QS-AR"
+        ],
+        "strength": 2,
+        "rationale": "Совместные публикации и доклады укрепляют международную репутацию"
+      },
+      {
+        "kpi_id": "U-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS"
+        ],
+        "strength": 3,
+        "rationale": "Исследования по ЦУР прямо учитываются в индикаторе Sustainability"
+      },
+      {
+        "kpi_id": "F-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS"
+        ],
+        "strength": 2,
+        "rationale": "Проекты факультета по ЦУР"
+      },
+      {
+        "kpi_id": "D-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS",
+          "THE-ENV"
+        ],
+        "strength": 2,
+        "rationale": "Публикации по ЦУР"
+      },
+      {
+        "kpi_id": "T-03",
+        "goal_ids": [
+          "G5"
+        ],
+        "indicator_ids": [
+          "QS-SUS"
+        ],
+        "strength": 1,
+        "rationale": "Участие в проектах по устойчивому развитию"
+      },
+      {
+        "kpi_id": "U-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Качество преподавания влияет на репутацию в преподавании"
+      },
+      {
+        "kpi_id": "F-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "QS-FSR",
+          "THE-TEACH"
+        ],
+        "strength": 3,
+        "rationale": "Соотношение студентов и преподавателей прямо входит в QS FSR и THE Teaching"
+      },
+      {
+        "kpi_id": "D-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Активные методы обучения повышают качество учебной среды"
+      },
+      {
+        "kpi_id": "T-04",
+        "goal_ids": [
+          "G2"
+        ],
+        "indicator_ids": [
+          "THE-TEACH"
+        ],
+        "strength": 2,
+        "rationale": "Индивидуальное качество преподавания"
+      },
+      {
+        "kpi_id": "U-05",
+        "goal_ids": [
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-EO",
+          "QS-ER"
+        ],
+        "strength": 3,
+        "rationale": "Трудоустройство выпускников прямо измеряется Employment Outcomes и влияет на репутацию у работодателей"
+      },
+      {
+        "kpi_id": "F-05",
+        "goal_ids": [
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-EO",
+          "QS-ER"
+        ],
+        "strength": 3,
+        "rationale": "Трудоустройство выпускников факультета"
+      },
+      {
+        "kpi_id": "D-05",
+        "goal_ids": [
+          "G4"
+        ],
+        "indicator_ids": [
+          "QS-ER",
+          "THE-IND"
+        ],
+        "strength": 2,
+        "rationale": "Договоры с работодателями, включая НИОКР по заказам индустрии"
+      },
+      {
+        "kpi_id": "T-05",
+        "goal_ids": [
+          "G4",
+          "G2"
+        ],
+        "indicator_ids": [
+          "QS-ER"
+        ],
+        "strength": 2,
+        "rationale": "Проекты с работодателями и практиками повышают компетентность выпускников"
+      },
+      {
+        "kpi_id": "U-06",
+        "goal_ids": [
+          "G6"
+        ],
+        "indicator_ids": [],
+        "strength": 3,
+        "rationale": "прямо измеряет цель G6"
+      },
+      {
+        "kpi_id": "F-06",
+        "goal_ids": [
+          "G6"
+        ],
+        "indicator_ids": [],
+        "strength": 2,
+        "rationale": "план приёма — вклад в рост контингента"
+      },
+      {
+        "kpi_id": "D-06",
+        "goal_ids": [
+          "G6"
+        ],
+        "indicator_ids": [],
+        "strength": 2,
+        "rationale": "онлайн-группы позволяют расти без роста штата"
+      },
+      {
+        "kpi_id": "T-06",
+        "goal_ids": [
+          "G6"
+        ],
+        "indicator_ids": [],
+        "strength": 1,
+        "rationale": "индивидуальный вклад"
+      }
+    ]
+  }
+}
