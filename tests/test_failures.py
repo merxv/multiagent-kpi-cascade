@@ -223,3 +223,38 @@ def test_ranking_analyst_reconciles_with_knowledge_base(settings):
     fixes = [e["message"] for e in events if e["name"] == "reconcile"]
     assert fixes and "удалён повтор THE-TEACH" in fixes[0] and "THE-REP" in fixes[0]
     assert "вес QS-AR: 25% → 30%" in fixes[0] and "дополнен из базы знаний THE-QUAL" in fixes[0]
+
+
+class ShallowTreeProvider(MockProvider):
+    """Первый ответ KPIDesigner: дерево без уровня «Преподаватель» и без единиц измерения;
+    дальше — нормальный ответ. Проверяем, что ошибки названы понятно и модель переспрашивают."""
+
+    def __init__(self):
+        super().__init__()
+        self.kd_calls = 0
+        self.retry_prompt = ""
+
+    def complete(self, system, user, agent, max_tokens):
+        resp = super().complete(system, user, agent, max_tokens)
+        if agent == "kpi_designer":
+            self.kd_calls += 1
+            if self.kd_calls == 1:
+                data = json.loads(resp.text)
+                for u in data["kpis"]:
+                    u["unit"] = ""
+                    for f in u["children"]:
+                        for d in f["children"]:
+                            d["children"] = []
+                resp.text = json.dumps(data, ensure_ascii=False)
+            else:
+                self.retry_prompt = user
+        return resp
+
+
+def test_kpi_tree_errors_are_explained_and_retried(settings):
+    provider = ShallowTreeProvider()
+    result = run(settings, UNIV_B, provider)
+    assert result.status == "completed", result.message
+    assert provider.kd_calls == 2
+    assert "на уровне «Преподаватель» 0 KPI" in provider.retry_prompt
+    assert "нет единицы измерения" in provider.retry_prompt and "KPI «Доля" in provider.retry_prompt

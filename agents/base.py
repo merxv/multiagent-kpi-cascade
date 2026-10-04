@@ -118,7 +118,7 @@ class BaseAgent:
             self.logger.log("retry", self.name, "llm_validation", status="error",
                             message=f"попытка {attempt + 1}: " + "; ".join(problems)[:500])
             # Повторный запрос: исходное задание + предыдущий ответ + список ошибок
-            prompt = (f"{user}\n\n---\nТвой предыдущий ответ:\n{resp.text[:6000]}\n\n"
+            prompt = (f"{user}\n\n---\nТвой предыдущий ответ:\n{resp.text[:12000]}\n\n"
                       f"В нём есть ошибки, исправь их и верни полный JSON заново:\n- "
                       + "\n- ".join(problems))
         raise AgentError(self.name, "LLM не вернул корректный результат после "

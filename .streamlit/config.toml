@@ -1,0 +1,8 @@
+# Настройки Streamlit для проекта.
+[server]
+# Отключаем слежение за изменениями файлов: иначе Streamlit при старте перебирает все модули
+# transformers/torch и печатает в консоль трейсбеки про отсутствующий torchvision (на работу не влияют).
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false

@@ -15,7 +15,7 @@
 Отвечай ТОЛЬКО JSON-объектом без пояснений, строго в формате:
 {
   "links": [
-    {"kpi_id": "A-U-01", "goal_ids": ["G1"], "indicator_ids": ["QS-CPF", "THE-QUAL"], "strength": 3,
+    {"kpi_id": "U-01", "goal_ids": ["G1"], "indicator_ids": ["QS-CPF", "THE-QUAL"], "strength": 3,
      "rationale": "..."}
   ]
 }

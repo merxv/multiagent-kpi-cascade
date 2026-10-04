@@ -24,6 +24,6 @@
   "summary": "Общий вывод в 2–3 предложениях",
   "issues": [
     {"addressee": "KPIDesigner", "priority": "medium", "category": "перекос", "description": "...",
-     "related_ids": ["A-T-01"]}
+     "related_ids": ["T-01"]}
   ]
 }

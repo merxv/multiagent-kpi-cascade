@@ -139,6 +139,27 @@ class KPISet(BaseModel):
         return f"итерация {self.iteration}, KPI всего {len(self.kpis)} ({per_level})"
 
 
+class KPINode(BaseModel):
+    """KPI в виде узла дерева — так его возвращает LLM.
+
+    Дочерние KPI (уровнем ниже) вложены в поле children, поэтому модели не нужно
+    придумывать id и ссылаться на родителя: id и parent_id проставляет код (KPIDesigner.flatten).
+    """
+    name: str
+    method: str = ""
+    unit: str = ""
+    target: int | float | str | None = None
+    baseline: int | float | str | None = None
+    period: str = ""
+    rationale: str = ""
+    children: list["KPINode"] = Field(default_factory=list)
+
+
+class KPITree(BaseModel):
+    """Ответ LLM у KPIDesigner: список KPI верхнего уровня с вложенными дочерними."""
+    kpis: list[KPINode]
+
+
 # ---------------------------------------------------------------------------
 # AlignmentMapper
 # ---------------------------------------------------------------------------
