@@ -185,3 +185,41 @@ def test_unexpected_orchestrator_error_is_caught(settings, monkeypatch):
 def test_bad_request_is_rejected_before_run(bad):
     with pytest.raises(ValueError):
         TaskRequest(input_path=UNIV_A, **bad)
+
+
+class ConfusedRankingProvider(MockProvider):
+    """Воспроизводит ошибку локальной модели: подындикаторы THE как отдельные индикаторы,
+    повторы id, неверные веса и пропуски (Σ весов THE = 62.5%)."""
+
+    def complete(self, system, user, agent, max_tokens):
+        resp = super().complete(system, user, agent, max_tokens)
+        if agent == "ranking_analyst":
+            data = json.loads(resp.text)
+            qs = [i for i in data["indicators"] if i["ranking"] == "QS"]
+            qs[0]["weight"] = 25  # неверный вес QS-AR
+            the = [
+                {"id": "THE-TEACH", "ranking": "THE", "name": "Teaching", "weight": 15},
+                {"id": "THE-TEACH", "ranking": "THE", "name": "Staff-to-student ratio", "weight": 4.5},
+                {"id": "THE-ENV", "ranking": "THE", "name": "Research Environment", "weight": 29},
+                {"id": "THE-REP", "ranking": "THE", "name": "Research reputation", "weight": 14},
+            ]
+            data["indicators"] = qs[1:] + [qs[0]] + the  # THE-QUAL, THE-INT, THE-IND пропущены
+            resp.text = json.dumps(data, ensure_ascii=False)
+        return resp
+
+
+def test_ranking_analyst_reconciles_with_knowledge_base(settings):
+    result = run(settings, UNIV_B, ConfusedRankingProvider())
+    assert result.status == "completed", result.message
+    by_id = {i.id: i for i in result.indicators.indicators}
+    assert sorted(i for i in by_id if i.startswith("THE")) == ["THE-ENV", "THE-IND", "THE-INT", "THE-QUAL", "THE-TEACH"]
+    assert by_id["THE-TEACH"].weight == 29.5 and by_id["QS-AR"].weight == 30
+    assert result.indicators.weight_sum("THE") == 100 and result.indicators.weight_sum("QS") == 100
+    assert by_id["THE-QUAL"].influencing_activities  # дополнено из базы знаний вместе с деятельностью
+    # Ответ LLM приняли с первой попытки, а исправления видны в логе
+    events = log_events(result)
+    ra_llm = [e for e in events if e["event"] == "llm_call" and e["agent"] == "RankingAnalyst"]
+    assert len(ra_llm) == 1
+    fixes = [e["message"] for e in events if e["name"] == "reconcile"]
+    assert fixes and "удалён повтор THE-TEACH" in fixes[0] and "THE-REP" in fixes[0]
+    assert "вес QS-AR: 25% → 30%" in fixes[0] and "дополнен из базы знаний THE-QUAL" in fixes[0]

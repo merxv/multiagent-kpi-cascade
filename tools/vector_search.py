@@ -16,6 +16,11 @@ from pathlib import Path
 from tools import ToolError
 
 COLLECTION = "ranking_methodologies"
+# Версия формата индекса: при изменении метаданных старый индекс перестраивается автоматически
+INDEX_VERSION = 2
+# Заголовок раздела индикатора: «Academic Reputation (QS-AR), вес 30%»
+INDICATOR_HEADING = re.compile(r"^(?P<name>.+?)\s*\((?P<id>[A-Z]+-[A-Z]+)\),\s*вес\s*(?P<weight>[\d.,]+)\s*%")
+ACTIVITIES_LINE = re.compile(r"Влияющая деятельность[^:\n]*:\s*(?P<items>.+?)(?:\n\n|$)", re.S)
 
 
 # ---------------------------------------------------------------------------
@@ -91,14 +96,27 @@ def _client(chroma_dir: Path):
 
 
 def split_methodology(path: Path) -> list[dict]:
-    """Режет файл методологии на фрагменты по заголовкам второго уровня."""
+    """Режет файл методологии на фрагменты по заголовкам второго уровня.
+
+    Для разделов-индикаторов из заголовка и текста извлекаются структурированные поля
+    (id, название, вес, влияющая деятельность) — это факты, которые агенту не нужно «угадывать».
+    """
     text = path.read_text(encoding="utf-8")
     ranking = path.stem.upper()  # qs.md -> QS
     title = text.splitlines()[0].lstrip("# ").strip()
     chunks = []
     for section in re.split(r"\n(?=## )", text):
         heading = section.splitlines()[0].lstrip("# ").strip()
-        chunks.append({"text": f"{title}. {section.strip()}", "ranking": ranking, "section": heading})
+        chunk = {"text": f"{title}. {section.strip()}", "ranking": ranking, "section": heading,
+                 "indicator_id": "", "indicator_name": "", "weight": -1.0, "activities": ""}
+        m = INDICATOR_HEADING.match(heading)
+        if m:
+            chunk.update(indicator_id=m["id"], indicator_name=m["name"].strip(),
+                         weight=float(m["weight"].replace(",", ".")))
+            a = ACTIVITIES_LINE.search(section)
+            if a:
+                chunk["activities"] = " ".join(a["items"].split()).rstrip(".")
+        chunks.append(chunk)
     return chunks
 
 
@@ -116,12 +134,14 @@ def build_index(settings) -> dict:
     except Exception:
         pass  # коллекции ещё не было
     col = client.create_collection(COLLECTION, embedding_function=None,
-                                   metadata={"hnsw:space": "cosine", "embedding_backend": embedder.name})
+                                   metadata={"hnsw:space": "cosine", "embedding_backend": embedder.name,
+                                             "index_version": INDEX_VERSION})
     col.add(
         ids=[f"{c['ranking']}-{i}" for i, c in enumerate(chunks)],
         documents=[c["text"] for c in chunks],
         embeddings=embedder.encode([c["text"] for c in chunks]),
-        metadatas=[{"ranking": c["ranking"], "section": c["section"]} for c in chunks],
+        metadatas=[{k: c[k] for k in ("ranking", "section", "indicator_id", "indicator_name", "weight", "activities")}
+                   for c in chunks],
     )
     return {"files": len(files), "chunks": len(chunks), "embedding_backend": embedder.name}
 
@@ -143,15 +163,19 @@ class VectorSearch:
                 col = client.get_collection(COLLECTION)
             except Exception:
                 col = None
-            if col is None or col.count() == 0:
-                # Индекса нет — строим автоматически (то же делает scripts/build_index.py)
+            if col is None or col.count() == 0 or col.metadata.get("index_version") != INDEX_VERSION:
+                # Индекса нет или он старого формата — строим автоматически (то же делает scripts/build_index.py)
                 build_index(self.settings)
                 col = client.get_collection(COLLECTION)
             self._collection = col
         return self._collection
 
     def search(self, query: str, ranking: str | None = None, k: int = 5) -> list[dict]:
-        """Возвращает k ближайших фрагментов: [{'text', 'ranking', 'section', 'score'}]."""
+        """Возвращает k ближайших фрагментов.
+
+        Каждый фрагмент: {'text', 'ranking', 'section', 'score'}, а для разделов-индикаторов ещё
+        {'indicator_id', 'indicator_name', 'weight', 'activities'} (иначе indicator_id = "").
+        """
         col = self._get_collection()
         backend = col.metadata.get("embedding_backend", "hashing")
         embedder = get_embedder(backend, self.settings.embedding_model)
@@ -159,6 +183,8 @@ class VectorSearch:
                         where={"ranking": ranking} if ranking else None)
         return [
             {"text": doc, "ranking": meta["ranking"], "section": meta["section"],
+             "indicator_id": meta.get("indicator_id", ""), "indicator_name": meta.get("indicator_name", ""),
+             "weight": meta.get("weight", -1.0), "activities": meta.get("activities", ""),
              "score": round(1 - dist, 3)}
             for doc, meta, dist in zip(res["documents"][0], res["metadatas"][0], res["distances"][0])
         ]
